@@ -298,6 +298,20 @@ def test_pipelining():
     s.stop()
 
 
+def test_nodelay():
+    # With Nagle's algorithm the second response waits for an ACK of the first, which the client delays by 40 ms
+    s = Server()
+    with s.connect() as sock:
+        start = time.monotonic()
+        for _ in range(20):
+            sock.sendall(get('/hello.txt', close=False) * 2)
+            data = b''
+            while data.count(b'hello\n') < 2:
+                data += sock.recv(65536)
+        assert time.monotonic() - start < 0.3
+    s.stop()
+
+
 def test_bad_requests():
     s = Server()
     cases = [

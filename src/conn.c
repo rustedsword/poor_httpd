@@ -3,6 +3,7 @@
 
 #include <fcntl.h>
 #include <linux/openat2.h>
+#include <netinet/tcp.h>
 #include <poor_array.h>
 #include <poor_loop_uring_array.h>
 #include <poor_stdio.h>
@@ -33,7 +34,7 @@ struct conn {
 	conn_file file;
 	struct poor_list_node link;
 	struct server *server;
-	struct poor_loop_op recv_op, send_op, open_op, shutdown_op, stat_op, read_op;
+	struct poor_loop_op recv_op, send_op, open_op, shutdown_op, nodelay_op, stat_op, read_op;
 	struct poor_loop_timer timer;
 	struct http_request req;
 	struct statx stx;
@@ -52,6 +53,7 @@ poor_loop_group_attach(conn_sock, struct conn, sock, recv_op, on_recv);
 poor_loop_group_attach(conn_sock, struct conn, sock, send_op, on_send);
 poor_loop_group_attach(conn_sock, struct conn, sock, open_op, on_open);
 poor_loop_group_attach(conn_sock, struct conn, sock, shutdown_op, on_shutdown);
+poor_loop_group_attach(conn_sock, struct conn, sock, nodelay_op, on_nodelay);
 poor_loop_group_attach(conn_sock, struct conn, sock, timer, on_timeout);
 poor_loop_group_attach(conn_file, struct conn, file, stat_op, on_stat);
 poor_loop_group_attach(conn_file, struct conn, file, read_op, on_read);
@@ -62,6 +64,9 @@ static struct open_how open_how = {
 	.mode = 0,
 	.resolve = RESOLVE_BENEATH | RESOLVE_NO_MAGICLINKS,
 };
+
+/* The kernel reads it when the setsockopt is submitted */
+static int one = 1;
 
 #define out_print(c, ...) ((c)->out_len += sprint_array(arrview_cfront((c)->out_len, (c)->out), __VA_ARGS__))
 
@@ -370,6 +375,11 @@ POOR_LOOP_GROUP_OP(on_shutdown, loop, sock, op, cqe)
 		conn_end(loop, conn_of_sock(sock));
 }
 
+/* A UNIX socket from systemd has no TCP_NODELAY, so the result is ignored */
+POOR_LOOP_GROUP_OP(on_nodelay, loop, sock, op, cqe)
+{
+}
+
 POOR_LOOP_GROUP_OP(on_open, loop, sock, op, cqe)
 {
 	struct conn *c = conn_of_sock(sock);
@@ -494,6 +504,7 @@ void conn_start(struct poor_loop *loop, struct server *s, int fd, const struct s
 	poor_loop_op_init(&c->send_op, on_send);
 	poor_loop_op_init(&c->open_op, on_open);
 	poor_loop_op_init(&c->shutdown_op, on_shutdown);
+	poor_loop_op_init(&c->nodelay_op, on_nodelay);
 	poor_loop_op_init(&c->stat_op, on_stat);
 	poor_loop_op_init(&c->read_op, on_read);
 	poor_loop_timer_init(&c->timer, on_timeout);
@@ -503,6 +514,9 @@ void conn_start(struct poor_loop *loop, struct server *s, int fd, const struct s
 	poor_list_append(&s->conns, c);
 	s->nconns++;
 	server_acquire(s);
+	/* Without TCP_NODELAY the end of a response waits for an ACK of what came before it, and clients delay ACKs */
+	io_uring_prep_cmd_sock_array(sock_sqe(loop, c, &c->nodelay_op), SOCKET_URING_OP_SETSOCKOPT, fd, IPPROTO_TCP, TCP_NODELAY,
+				     array_ptr(&one));
 	conn_next(loop, c);
 }
 
