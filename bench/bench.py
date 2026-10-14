@@ -42,6 +42,23 @@ FILES = {
     'site/data.json': 2 << 10,
     'site/favicon.ico': 1 << 10,
 }
+BROWSER = {
+    'Connection': 'keep-alive',
+    'sec-ch-ua': '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Linux"',
+    'Upgrade-Insecure-Requests': '1',
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,'
+              'application/signed-exchange;v=b3;q=0.7',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-User': '?1',
+    'Sec-Fetch-Dest': 'document',
+    'Accept-Encoding': 'gzip, deflate, br, zstd',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Cookie': 'session=0123456789abcdef0123456789abcdef; theme=dark',
+}
 SITE = ['/site/', '/site/style.css', '/site/app.js', '/site/logo.svg', '/site/photo.jpg', '/site/icon.png',
         '/site/font.woff2', '/site/data.json', '/site/favicon.ico']
 
@@ -70,6 +87,7 @@ SCENARIOS = [
     Scenario('latency', 'a small file over one connection: the round trip of a request', ['/small.html'], conns=1,
              saturates=False),
     Scenario('small', 'a small file over keep-alive connections', ['/small.html']),
+    Scenario('browser', 'like small, with the headers of a browser', ['/small.html'], headers=BROWSER),
     Scenario('pipeline', 'a small file, 16 pipelined requests at a time', ['/small.html'], depth=16),
     Scenario('close', 'a small file, a new connection for every request', ['/small.html'], close=True),
     Scenario('idle', 'like close, while many idle connections stay open', ['/small.html'], close=True, idle=True),

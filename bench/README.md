@@ -46,6 +46,7 @@ remaining CPUs. `--server-cpus`, `--worker-cpus` and `--client-cpus` change it. 
 |---|---|
 | latency | one connection: the round trip of a request, with every wake-up on the way |
 | small | a 1 KiB file over 64 keep-alive connections: the cost of a request |
+| browser | small with the 15 headers of a browser, 715 bytes: parsing a request |
 | pipeline | 16 pipelined requests at a time: a request without a network round trip |
 | close | a new connection for every request: accept, shutdown, linger and close |
 | idle | close next to 10000 idle connections: what grows with the connections |
@@ -60,7 +61,7 @@ remaining CPUs. `--server-cpus`, `--worker-cpus` and `--client-cpus` change it. 
 
 Every scenario first makes its request once and checks the status, so a missing file can't turn `small` into a
 benchmark of 404s. Differences between scenarios point at parts of the server: `index` against `small` is the cost of
-a directory, `close` against `small` the cost of a connection.
+a directory, `close` against `small` the cost of a connection, `browser` against `small` the cost of headers.
 
 ## Columns
 
