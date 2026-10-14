@@ -124,9 +124,12 @@ static void conn_end(struct poor_loop *loop, struct conn *c)
 		return;
 	c->closing = true;
 	poor_loop_group_acquire(&c->sock);
-	if (c->recv_op.pending || c->send_op.pending || c->shutdown_op.pending)
-		io_uring_prep_cancel_fd(need_sqe(poor_loop_get_untracked_sqe_or_submit(loop)), c->sock.fd,
-					IORING_ASYNC_CANCEL_ALL);
+	if (c->recv_op.pending)
+		cancel_op(loop, &c->recv_op);
+	if (c->send_op.pending)
+		cancel_op(loop, &c->send_op);
+	if (c->shutdown_op.pending)
+		cancel_op(loop, &c->shutdown_op);
 	(void)poor_loop_group_timer_disarm(&c->sock, &c->timer);
 	conn_file_release(loop, c);
 	conn_put(loop, c);
