@@ -298,6 +298,18 @@ def test_pipelining():
     s.stop()
 
 
+def test_split_head():
+    s = Server()
+    for parts in [(b'GET /hello.txt HTTP/1.1\r\nHost: test\r\n\r', b'\n'), (b'GET /hello.txt HTTP/1.1\r\nHost: test\r\n', b'\r\n'),
+                  (b'GET /hello.txt HTTP/1.1\nHost: test\n', b'\n'), (b'GET /hello.txt HTTP/1.1\r', b'\nHost: test\r\n\r\n')]:
+        with s.connect() as sock:
+            for part in parts:
+                sock.sendall(part)
+                time.sleep(0.05)
+            assert read_response(sock)[2] == b'hello\n', parts
+    s.stop()
+
+
 def test_nodelay():
     # With Nagle's algorithm the second response waits for an ACK of the first, which the client delays by 40 ms
     s = Server()

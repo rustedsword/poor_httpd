@@ -9,9 +9,15 @@
 
 #include "http.h"
 
+static constexpr bool delimiter[128] = {
+	['"'] = true, ['('] = true,  [')'] = true, [','] = true, ['/'] = true, [':'] = true,
+	[';'] = true, ['<'] = true,  ['='] = true, ['>'] = true, ['?'] = true, ['@'] = true,
+	['['] = true, ['\\'] = true, [']'] = true, ['{'] = true, ['}'] = true,
+};
+
 static bool is_tchar(unsigned char ch)
 {
-	return ch > ' ' && ch < 0x7f && !strchr("\"(),/:;<=>?@[\\]{}", ch);
+	return ch > ' ' && ch < 0x7f && !delimiter[ch];
 }
 
 static bool is_token(struct http_str s)
@@ -98,9 +104,9 @@ static bool str_to_u64(struct http_str s, uint64_t *v)
 
 size_t _http_head_length(size_t len, const char (*buf)[len], size_t *scanned)
 {
-	for (size_t i = *scanned; i < len; i++) {
-		if ((*buf)[i] != '\n')
-			continue;
+	for (const char *end = *buf + len, *at = *buf + *scanned; (at = memchr(at, '\n', end - at)); at++) {
+		size_t i = at - *buf;
+
 		if ((i >= 1 && (*buf)[i - 1] == '\n') || (i >= 2 && (*buf)[i - 1] == '\r' && (*buf)[i - 2] == '\n'))
 			return i + 1;
 	}
