@@ -1,0 +1,12 @@
+BasedOnStyle: LLVM
+ColumnLimit: 130
+IndentWidth: 8
+ContinuationIndentWidth: 8
+UseTab: ForContinuationAndIndentation
+BreakBeforeBraces: Linux
+AllowShortFunctionsOnASingleLine: None
+Cpp11BracedListStyle: Block
+SpaceBeforeParens: ControlStatementsExceptControlMacros
+ForEachMacros: [poor_list_foreach, poor_list_foreach_safe, poor_list_foreach_bw, poor_list_foreach_bw_safe, foreach_array_ref, foreach_array_const_ref, foreach_array_ref_bw, foreach_array_const_ref_bw, foreach_array_index, foreach_array_index_bw]
+SkipMacroDefinitionBody: true
+OneLineFormatOffRegex: '^TEST$'

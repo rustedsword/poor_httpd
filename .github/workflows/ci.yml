@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gcc:
+    name: gcc-${{ matrix.version }} ${{ matrix.build }} ${{ matrix.deps }}
+    runs-on: ubuntu-26.04
+    container:
+      image: gcc:${{ matrix.version }}
+      options: --cap-add=SYS_PTRACE --security-opt seccomp=unconfined
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [15, 16]
+        build: [sanitizers, release]
+        deps: [system, bundled]
+    env:
+      MESON_ARGS: -Dwerror=true ${{ matrix.build == 'sanitizers' && '-Dbuildtype=debug -Db_sanitize=address,undefined' || '-Dbuildtype=release' }} ${{ matrix.deps == 'system' && '--wrap-mode=nofallback' || '--force-fallback-for=poor_loop,liburing,poor_base' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install dependencies
+        run: apt-get update && apt-get install -y --no-install-recommends meson pkgconf ${{ matrix.deps == 'system' && 'liburing-dev' || '' }}
+      - name: Fetch subprojects
+        run: |
+          git -c safe.directory='*' submodule update --init subprojects/poor_loop
+          git -c safe.directory='*' -C subprojects/poor_loop submodule update --init subprojects/poor_base subprojects/liburing/liburing
+      - name: Install poor_base and poor_loop
+        if: matrix.deps == 'system'
+        run: |
+          meson setup /tmp/poor_base subprojects/poor_loop/subprojects/poor_base
+          meson install -C /tmp/poor_base
+          meson setup /tmp/poor_loop subprojects/poor_loop --wrap-mode=nofallback
+          meson install -C /tmp/poor_loop
+          ldconfig
+      - name: Build
+        run: |
+          meson setup build $MESON_ARGS
+          meson compile -C build
+      - name: Test
+        run: |
+          meson test -C build --print-errorlogs
+          ! grep -q '"result": "SKIP"' build/meson-logs/testlog.json
+
+  clang:
+    name: clang-${{ matrix.version }} ${{ matrix.build }} ${{ matrix.deps }}
+    runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [21, 22, 23]
+        build: [sanitizers, release]
+        deps: [system, bundled]
+    env:
+      CC: clang-${{ matrix.version }}
+      MESON_ARGS: -Dwerror=true ${{ matrix.build == 'sanitizers' && '-Dbuildtype=debug -Db_sanitize=address,undefined -Db_lundef=false' || '-Dbuildtype=release' }} ${{ matrix.deps == 'system' && '--wrap-mode=nofallback' || '--force-fallback-for=poor_loop,liburing,poor_base' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install dependencies
+        run: |
+          wget -qO llvm.sh https://apt.llvm.org/llvm.sh
+          sudo bash llvm.sh ${{ matrix.version }}
+          sudo apt-get install -y libclang-rt-${{ matrix.version }}-dev meson ${{ matrix.deps == 'system' && 'liburing-dev' || '' }}
+      - name: Fetch subprojects
+        run: |
+          git submodule update --init subprojects/poor_loop
+          git -C subprojects/poor_loop submodule update --init subprojects/poor_base subprojects/liburing/liburing
+      - name: Install poor_base and poor_loop
+        if: matrix.deps == 'system'
+        run: |
+          meson setup /tmp/poor_base subprojects/poor_loop/subprojects/poor_base
+          sudo meson install -C /tmp/poor_base
+          meson setup /tmp/poor_loop subprojects/poor_loop --wrap-mode=nofallback
+          sudo meson install -C /tmp/poor_loop
+          sudo ldconfig
+      - name: Build
+        run: |
+          meson setup build $MESON_ARGS
+          meson compile -C build
+      - name: Test
+        run: |
+          meson test -C build --print-errorlogs
+          ! grep -q '"result": "SKIP"' build/meson-logs/testlog.json
