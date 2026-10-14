@@ -26,3 +26,4 @@ poor_httpd = executable(
 )
 
 subdir('tests')
+subdir('bench')

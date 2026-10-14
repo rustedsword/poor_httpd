@@ -21,8 +21,8 @@ meson setup build
 meson compile -C build
 ```
 
-`meson test -C build` runs the tests, which need Python 3. `meson install -C build --skip-subprojects` installs
-just the server.
+`meson test -C build` runs the tests, which need Python 3, and [bench](bench/README.md) has benchmarks.
+`meson install -C build --skip-subprojects` installs just the server.
 
 ## Usage
 
