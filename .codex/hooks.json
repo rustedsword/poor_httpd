@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/foie_gras.py\"",
+            "additionalContextLimit": 0,
+            "timeout": 10,
+            "statusMessage": "Reading foie_gras files"
+          }
+        ]
+      }
+    ]
+  }
+}

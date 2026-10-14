@@ -1,0 +1,4 @@
+src/*
+subprojects/poor_loop/include/*.h
+subprojects/poor_loop/src/*.c
+subprojects/poor_loop/subprojects/poor_base/include/poor_array.h

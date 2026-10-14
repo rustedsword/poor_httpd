@@ -1,0 +1,5 @@
+{
+  "name": "foie-gras",
+  "version": "0.1.0",
+  "description": "feed: <task> or feed:NAME <task> opens the turn with Read calls for the files in .foie_gras"
+}
